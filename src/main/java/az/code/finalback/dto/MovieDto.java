@@ -1,22 +1,32 @@
 package az.code.finalback.dto;
 
 import lombok.*;
+import lombok.experimental.FieldDefaults;
 
+import java.util.HashMap;
 import java.util.List;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class MovieDto {
-    private String name;
-    private String releaseTime;
-    private String movieDuration;
-    private String imdbRating;
-    private String movieType;
-    private List<String> directorNames;
-    private List<String> writerNames;
-    private List<String> genres;
-    private List<String> actorNames;
-    private List<String> starActors;
+    long id;
+    String name;
+    String releaseTime;
+    String movieDuration;
+    String imdbRating;
+    String movieType;
+    String storyLine;
+    String movieImg;
+    String movieVideo;
+    int commentCount;
+    List<String> genres;
+    List<MoviePersonDto> directors;
+    List<MoviePersonDto> writers;
+    List<ActorForMovieDto> actors;
+    List<MoviePersonDto> starActors;
+    List<MovieDto> similarMovies;
+    List<CommentResponseMovieDto> comments;
 }

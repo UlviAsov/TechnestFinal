@@ -10,4 +10,5 @@ import java.util.List;
 public interface WriterRepository extends JpaRepository<Writer,Long> {
 
     List<Writer> findByWriterNameContainingIgnoreCase(String searchQuery);
+
 }

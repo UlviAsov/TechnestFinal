@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface DirectorRepository extends JpaRepository<Director,Long> {
     List<Director> findByDirectorNameContainingIgnoreCase(String searchQuery);
+
 }

@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "users")
 @Data
@@ -18,4 +21,9 @@ public class User {
     String username;
     String email;
     String password;
+    String userImg;
+    int watchlistSize;
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private Watchlist watchlist;
+
 }

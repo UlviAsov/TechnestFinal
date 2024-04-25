@@ -6,6 +6,7 @@ import az.code.finalback.service.Impl.ActorServiceImpl;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,10 +19,17 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ActorController {
     final ActorServiceImpl actorService;
-
     @GetMapping("/actor")
-    public List<ActorDto> getActorsByName(@RequestParam String fullName) {
-        return actorService.findActorsByName(fullName);
+    public List<ActorDto> getActorByName(@RequestParam String fullName) {
+        return actorService.getActorByName(fullName);
     }
-
+    @GetMapping("/{id}")
+    public ResponseEntity<ActorDto> getActorById(@PathVariable long id) {
+        ActorDto actorDto = actorService.getActorById(id);
+        if (actorDto != null) {
+            return ResponseEntity.ok(actorDto);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }

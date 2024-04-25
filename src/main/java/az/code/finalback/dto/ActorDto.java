@@ -11,7 +11,12 @@ import java.util.List;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ActorDto {
-    private String fullName;
-    private String bio;
-    private List<MovieDto> movies;
+    String fullName;
+    String bio;
+    String height;
+    String bornTime;
+    String bornPlace;
+    String imgLink;
+    String videoLink;
+    List<MovieDto> movies;
 }

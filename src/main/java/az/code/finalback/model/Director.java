@@ -13,11 +13,17 @@ import java.util.List;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Builder
-public class Director {
+public class Director{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     long id;
     String directorName;
     String bio;
-    String born;
+    String height;
+    String bornTime;
+    String bornPlace;
+    String imgLink;
+    String videoLink;
+    @ManyToMany(mappedBy = "directors")
+    List<Movie> movies;
 }

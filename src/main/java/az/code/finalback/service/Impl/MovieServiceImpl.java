@@ -1,12 +1,11 @@
 package az.code.finalback.service.Impl;
 
 
-import az.code.finalback.dto.MovieDto;
+import az.code.finalback.dto.*;
 import az.code.finalback.model.*;
 
-import az.code.finalback.modelMapper.MovieMapper;
+import az.code.finalback.repository.CommentRepository;
 import az.code.finalback.repository.MovieRepository;
-import az.code.finalback.repository.TypeRepository;
 import az.code.finalback.service.MovieService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +14,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,41 +24,8 @@ import java.util.stream.Collectors;
 public class MovieServiceImpl implements MovieService {
 
     final MovieRepository movieRepository;
-    final TypeRepository typeRepository;
-    final MovieMapper movieMapper;
+    final CommentRepository commentRepository;
     final ModelMapper modelMapper;
-    @Override
-    @Transactional(readOnly = true)
-    public List<MovieDto> getAllMovies() {
-        List<Movie> movies = movieRepository.findAll();
-        return movies.stream()
-                .map(movie -> {
-                    MovieDto movieDto = MovieDto.builder()
-                            .name(movie.getName())
-                            .releaseTime(movie.getReleaseTime())
-                            .movieDuration(movie.getMovieDuration())
-                            .imdbRating(String.valueOf(movie.getImdbRating()))
-                            .movieType(movie.getMovieType().getTypeName())
-                            .directorNames(movie.getDirectors().stream()
-                                    .map(Director::getDirectorName)
-                                    .collect(Collectors.toList()))
-                            .writerNames(movie.getWriters().stream()
-                                    .map(Writer::getWriterName)
-                                    .collect(Collectors.toList()))
-                            .genres(movie.getGenres().stream()
-                                    .map(Genre::getGenreName)
-                                    .collect(Collectors.toList()))
-                            .actorNames(movie.getActors().stream()
-                                    .map(Actor::getFullName)
-                                    .collect(Collectors.toList()))
-                            .starActors(movie.getStarActors().stream()
-                                    .map(Actor::getFullName)
-                                    .collect(Collectors.toList()))
-                            .build();
-                    return movieDto;
-                })
-                .collect(Collectors.toList());
-    }
 
     @Override
     @Transactional(readOnly = true)
@@ -69,9 +34,58 @@ public class MovieServiceImpl implements MovieService {
         if (movie == null) {
             return null;
         }
-        return convertToDto(movie);
+
+        MovieDto movieDto = convertToDto(movie);
+
+        List<String> movieGenres = movieDto.getGenres();
+
+        List<Comment> comments = commentRepository.findByMovie(movie);
+        int commentCount = comments.size();
+        movieDto.setCommentCount(commentCount);
+
+        List<CommentResponseMovieDto> commentDtos = comments.stream()
+                .map(comment -> CommentResponseMovieDto.builder()
+                        .id(comment.getId())
+                        .comment(comment.getComment())
+                        .username(comment.getUser().getUsername())
+                        .userImg(comment.getUser().getUserImg())
+                        .userId(comment.getUser().getId())
+                        .build())
+                .collect(Collectors.toList());
+
+        movieDto.setComments(commentDtos);
+
+        List<Movie> similarMovies = movieRepository.findByGenres(movieGenres);
+
+        List<MovieDto> similarMovieDtos = similarMovies.stream()
+                .filter(m -> m.getId() != id)
+                .map(this::convertToDtoWithNameAndImgAndRating)
+                .collect(Collectors.toList());
+
+        movieDto.setSimilarMovies(similarMovieDtos);
+
+        if (movie.getMovieImg() != null) {
+            movieDto.setMovieImg(movie.getMovieImg());
+        }
+        if (movie.getStoryLine() != null) {
+            movieDto.setStoryLine(movie.getStoryLine());
+        }
+        if (movie.getMovieVideo() != null) {
+            movieDto.setMovieVideo(movie.getMovieVideo());
+        }
+
+        return movieDto;
     }
 
+
+
+    private CommentDto convertReviewToCommentDto(Comment comment) {
+        CommentDto commentDto = new CommentDto();
+        commentDto.setUserId(comment.getUser().getId());
+        commentDto.setMovieId(comment.getMovie().getId());
+        commentDto.setComment(comment.getComment());
+        return commentDto;
+    }
 
     @Override
     public List<MovieDto> findMoviesByName(String name) {
@@ -103,34 +117,106 @@ public class MovieServiceImpl implements MovieService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public List<LatestMovieResponseDto> getLatestMovies() {
+        List<Movie> latestMovies = movieRepository.findFirst12ByOrderByReleaseTimeDesc();
+        return latestMovies.stream()
+                .map(movie -> LatestMovieResponseDto.builder()
+                        .id(movie.getId())
+                        .name(movie.getName())
+                        .movieImg(movie.getMovieImg())
+                        .imdbRating(movie.getImdbRating())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
 
     private MovieDto convertToDto(Movie movie) {
         MovieDto movieDto = new MovieDto();
+        movieDto.setId(movie.getId());
         movieDto.setName(movie.getName());
         movieDto.setReleaseTime(movie.getReleaseTime());
         movieDto.setMovieDuration(movie.getMovieDuration());
-        movieDto.setImdbRating(String.valueOf(movie.getImdbRating())); // long'u String'e dönüştür
-        movieDto.setMovieType(movie.getMovieType().getTypeName()); // Type nesnesinden sadece typeName alınır
+        movieDto.setImdbRating(movie.getImdbRating());
+        movieDto.setMovieType(movie.getMovieType().getTypeName());
 
-        List<String> directorNames = movie.getDirectors().stream().map(Director::getDirectorName).collect(Collectors.toList());
-        movieDto.setDirectorNames(directorNames);
+        //Directors
+        List<Director> directors = movie.getDirectors();
+        List<MoviePersonDto> directorDtos = new ArrayList<>();
+        for (Director director : directors) {
+            MoviePersonDto directorDto = new MoviePersonDto();
+            directorDto.setId(director.getId());
+            directorDto.setName(director.getDirectorName());
+            directorDtos.add(directorDto);
+        }
+        movieDto.setDirectors(directorDtos);
 
-        List<String> writerNames = movie.getWriters().stream().map(Writer::getWriterName).collect(Collectors.toList());
-        movieDto.setWriterNames(writerNames);
+        //Writers
+        List<Writer> writers = movie.getWriters();
+        List<MoviePersonDto> writerDtos = new ArrayList<>();
+        for (Writer writer : writers) {
+            MoviePersonDto writerDto = new MoviePersonDto();
+            writerDto.setId(writer.getId());
+            writerDto.setName(writer.getWriterName());
+            writerDtos.add(writerDto);
+        }
+        movieDto.setWriters(writerDtos);
 
         List<String> genreNames = movie.getGenres().stream().map(Genre::getGenreName).collect(Collectors.toList());
         movieDto.setGenres(genreNames);
 
-        List<String> actorNames = movie.getActors().stream().map(Actor::getFullName).collect(Collectors.toList());
-        movieDto.setActorNames(actorNames);
+        List<Actor> actors = movie.getActors();
 
-        List<String> starActorNames = movie.getStarActors().stream().map(Actor::getFullName).collect(Collectors.toList());
-        movieDto.setStarActors(starActorNames);
+        List<ActorForMovieDto> actorDtos = actors.stream()
+                .map(actor -> ActorForMovieDto.builder()
+                        .id(actor.getId())
+                        .name(actor.getFullName())
+                        .actorImg(actor.getImgLink())
+                        .build())
+                .collect(Collectors.toList());
 
+        movieDto.setActors(actorDtos);
+
+        //Star Actors
+        List<Actor> starActors = movie.getStarActors();
+        List<MoviePersonDto> starActorsDtos = new ArrayList<>();
+        for (Actor starActor : starActors) {
+            MoviePersonDto starActorDto = new MoviePersonDto();
+            starActorDto.setId(starActor.getId());
+            starActorDto.setName(starActor.getFullName());
+            starActorsDtos.add(starActorDto);
+        }
+        movieDto.setStarActors(starActorsDtos);
+
+        List<Movie> similarMovies = movieRepository.findByGenres(genreNames);
+        List<MovieDto> similarMovieDtos = similarMovies.stream()
+                .filter(m -> m.getId() != movie.getId())
+                .map(this::convertToDtoWithNameAndImgAndRating) 
+                .collect(Collectors.toList());
+        movieDto.setSimilarMovies(similarMovieDtos);
         return movieDto;
     }
 
+    private MovieDto convertToDtoWithNameAndImgAndRating(Movie movie) {
+        MovieDto movieDto = new MovieDto();
+        movieDto.setId(movie.getId());
+        movieDto.setName(movie.getName());
+        movieDto.setImdbRating(movie.getImdbRating());
+        movieDto.setMovieImg(movie.getMovieImg());
+        movieDto.setGenres(movie.getGenres().stream().map(Genre::getGenreName).collect(Collectors.toList()));
 
+        List<Director> directors = movie.getDirectors();
+        List<MoviePersonDto> directorDtos = new ArrayList<>();
+        for (Director director : directors) {
+            MoviePersonDto directorDto = new MoviePersonDto();
+            directorDto.setId(director.getId());
+            directorDto.setName(director.getDirectorName());
+            directorDtos.add(directorDto);
+        }
+        movieDto.setDirectors(directorDtos);
+
+        return movieDto;
+    }
     private Movie convertToEntity(MovieDto movieDto) {
         return modelMapper.map(movieDto, Movie.class);
     }

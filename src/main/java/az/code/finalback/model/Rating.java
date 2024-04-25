@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "ratings")
 @Data
@@ -20,4 +22,5 @@ public class Rating {
     @ManyToOne
     User user;
     int rating;
+    LocalDateTime ratedAt;
 }
